@@ -60,33 +60,57 @@ class Group {
         }
     }
 
-    public void simplifyDebts() {
-        Map<User, Integer> tempBalances = new HashMap<>(netBalances);
-        PriorityQueue<Map.Entry<User, Integer>> positive = new PriorityQueue<>((a, b) -> b.getValue() - a.getValue());
-        PriorityQueue<Map.Entry<User, Integer>> negative = new PriorityQueue<>(Map.Entry.comparingByValue());
+   public void simplifyDebts() {
 
-        for (Map.Entry<User, Integer> entry : tempBalances.entrySet()) {
-            if (entry.getValue() > 0) positive.offer(entry);
-            else if (entry.getValue() < 0) negative.offer(entry);
+    // Create a temporary copy to avoid mutating original balances
+    Map<User, Integer> tempBalances = new HashMap<>(netBalances);
+
+    // Max-heap for creditors (positive balances)
+    PriorityQueue<Map.Entry<User, Integer>> positive =
+            new PriorityQueue<>((a, b) -> b.getValue() - a.getValue());
+
+    // Min-heap for debtors (negative balances)
+    PriorityQueue<Map.Entry<User, Integer>> negative =
+            new PriorityQueue<>(Map.Entry.comparingByValue());
+
+    // Separate users into creditors and debtors
+    for (Map.Entry<User, Integer> entry : tempBalances.entrySet()) {
+        if (entry.getValue() > 0) {
+            positive.offer(entry);
+        } else if (entry.getValue() < 0) {
+            negative.offer(entry);
         }
+    }
 
-        while (!positive.isEmpty() && !negative.isEmpty()) {
+    // Settle debts by matching highest creditor with highest debtor
+    while (!positive.isEmpty() && !negative.isEmpty()) {
+
             Map.Entry<User, Integer> creditor = positive.poll();
             Map.Entry<User, Integer> debtor = negative.poll();
-            int settledAmount = Math.min(creditor.getValue(), -debtor.getValue());
+    
+            int settledAmount = Math.min(
+                    creditor.getValue(),
+                    -debtor.getValue()
+            );
 
             User creditorUser = creditor.getKey();
             User debtorUser = debtor.getKey();
-
+    
             debtMap.get(debtorUser).put(creditorUser, settledAmount);
             logs.add(debtorUser + " will pay Rs. " + settledAmount + " to " + creditorUser);
-
+    
             int creditorNewBalance = creditor.getValue() - settledAmount;
             int debtorNewBalance = debtor.getValue() + settledAmount;
 
-            if (creditorNewBalance > 0) positive.offer(new AbstractMap.SimpleEntry<>(creditorUser, creditorNewBalance));
-            if (debtorNewBalance < 0) negative.offer(new AbstractMap.SimpleEntry<>(debtorUser, debtorNewBalance));
+            if (creditorNewBalance > 0) {
+                positive.offer(new AbstractMap.SimpleEntry<>(creditorUser, creditorNewBalance));
+            }
+            if (debtorNewBalance < 0) {
+                negative.offer(new AbstractMap.SimpleEntry<>(debtorUser, debtorNewBalance));
+            }
         }
+    }
+
     }
 
     public void makePayment(User from, User to, int amount) {
